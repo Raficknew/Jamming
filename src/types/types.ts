@@ -1,16 +1,10 @@
 export type Track = {
-  id: string;
-  name: string;
-  duration_ms: number;
-  popularity: number;
-  album: {
-    name: string;
-    images: {
-      url: string;
-    }[];
-    release_date: string;
-  };
-  artists: {
-    name: string;
-  }[];
+  rank: string;
+  title: string;
+  artist: string;
+  "weeks at no.1"?: string;
+  last_week: string;
+  peak_position: string;
+  weeks_on_chart: string;
+  detail: string;
 };

@@ -1,140 +1,139 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { NavBar } from "./components/navBar/navBar";
 import { SearchBar } from "./components/searchBar/searchBar";
 import { TrackList } from "./components/trackList/trackList";
 import type { Track } from "./types/types";
 
-const MOCK_DATA = {
-  tracks: [
-    {
-      id: "4WNcduiCmDNfmTEz7JvmLv",
-      name: "Sweater Weather",
-      duration_ms: 240400,
-      popularity: 92,
-      album: {
-        name: "I Love You.",
-        images: [
-          {
-            url: "https://i.scdn.co/image/ab67616d0000b27382d622997632646c2f90a6f8",
-          },
-        ],
-        release_date: "2013-04-22",
+const fakeEndpoint = async (title: string, playList: Track[]) => {
+  if (!title || playList.length === 0) {
+    alert("Playlist title and tracks are required.");
+    return;
+  }
+  try {
+    await fetch("https://FAKECREATELISTENDPOINT/createPlaylist", {
+      method: "POST",
+      body: JSON.stringify({
+        title: title,
+        tracks: playList,
+      }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8",
       },
-      artists: [{ name: "The Neighbourhood" }],
-    },
-    {
-      id: "5XNqz6r_F_B_P_7_Y_1",
-      name: "Do I Wanna Know?",
-      duration_ms: 272391,
-      popularity: 90,
-      album: {
-        name: "AM",
-        images: [
-          {
-            url: "https://i.scdn.co/image/ab67616d0000b2734ae074c5417a1a4f73b31362",
-          },
-        ],
-        release_date: "2013-09-09",
-      },
-      artists: [{ name: "Arctic Monkeys" }],
-    },
-    {
-      id: "4D_F_3_o_p_Q_V_2",
-      name: "As It Was",
-      duration_ms: 167303,
-      popularity: 95,
-      album: {
-        name: "Harry's House",
-        images: [
-          {
-            url: "https://i.scdn.co/image/ab67616d0000b273b46f74097655d7f353caab14",
-          },
-        ],
-        release_date: "2022-05-20",
-      },
-      artists: [{ name: "Harry Styles" }],
-    },
-  ],
+    });
+    return "Created playlist successfully!";
+  } catch (error) {
+    return `Failed to create playlist, ${
+      error instanceof Error && error.message
+    }`;
+  }
 };
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<null | string>(null);
-  const [tracks, setTracks] = useState(MOCK_DATA.tracks);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [playlistTracks, setPlaylistTracks] = useState<Track[]>([]);
+  const [playListName, setPlayListName] = useState("");
 
-  const filteredTracks = tracks.filter((track) => {
-    return playlistTracks.every(
-      (plTrack: { id: string }) => plTrack.id !== track.id
-    );
-  });
+  const filteredTracks = useMemo(() => {
+    return tracks.filter((track) => {
+      return (
+        playlistTracks.includes(track) === false &&
+        (track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          track.artist.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    });
+  }, [tracks, playlistTracks, searchQuery]);
 
   const addToPlaylist = (track: Track) => {
     setPlaylistTracks((prev) => [...prev, track]);
   };
 
   const removeFromPlaylist = (track: Track) => {
-    setPlaylistTracks((prev) => prev.filter((t) => t.id !== track.id));
+    setPlaylistTracks((prev) => prev.filter((t) => t.rank !== track.rank));
   };
 
-  // useEffect(() => {
-  //   const fetchTracks = async () => {
-  //     setIsLoading(true);
-  //     try {
-  //       const response = await fetch(
-  //         "https://spotify23.p.rapidapi.com/tracks/?ids=4WNcduiCmDNfmTEz7JvmLv",
-  //         {
-  //           method: "GET",
-  //           headers: {
-  //             "x-rapidapi-key": import.meta.env.VITE_RAPIDAPI_KEY,
-  //             "x-rapidapi-host": import.meta.env.VITE_RAPIDAPI_HOST,
-  //           },
-  //         }
-  //       );
-  //       const data = await response.json();
-  //       setTracks(data.tracks);
-  //     } catch (error: Error) {
-  //       setError(error.message);
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-  //   fetchTracks();
-  // }, []);
+  useEffect(() => {
+    fetch(
+      "https://billboard-api2.p.rapidapi.com/hot-100?date=2019-05-11&range=1-10",
+      {
+        method: "GET",
+        headers: {
+          "x-rapidapi-key": import.meta.env.VITE_RAPIDAPI_KEY,
+          "x-rapidapi-host": "billboard-api2.p.rapidapi.com",
+        },
+      }
+    )
+      .then((response) => {
+        if (response.ok) {
+          return response.json();
+        }
+      })
+      .then((data) => {
+        setTracks(Object.values(data.content));
+      })
+      .catch((error) => {
+        setError(error.message);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Information title="Loading..." />;
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return <Information title={`Error: ${error}`} />;
   }
 
   return (
-    <div className="bg-violet-700 w-full h-screen flex flex-col items-center gap-10 pb-10">
+    <div className="bg-violet-700 w-full h-screen flex flex-col items-center gap-10 overflow-hidden">
       <NavBar />
       <SearchBar
         searchValue={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        onSubmit={() => {}}
       />
       <div className="flex flex-row gap-4 h-full">
         <TrackList tracks={filteredTracks} onClick={addToPlaylist}>
           <p className="text-2xl">Results</p>
-          <div className="h-px bg-white w-full" />
         </TrackList>
         <TrackList
           tracks={playlistTracks || []}
           onClick={removeFromPlaylist}
           onPlayList
+          sendPlaylist={async () => {
+            setIsLoading(true);
+            setPlayListName("");
+            setPlaylistTracks([]);
+            alert(await fakeEndpoint(playListName, playlistTracks));
+            setIsLoading(false);
+          }}
+          playListName={playListName}
         >
-          <p className="text-2xl">Playlist</p>
+          <input
+            type="text"
+            className="text-white outline-none text-2xl"
+            placeholder="Enter playlist Name..."
+            value={playListName}
+            onChange={(e) => setPlayListName(e.target.value)}
+            required
+          />
         </TrackList>
       </div>
     </div>
   );
 }
+
+const Information = ({ title }: { title: string }) => {
+  return (
+    <div className="bg-violet-700 w-full h-screen flex items-center justify-center text-white text-3xl">
+      {title}
+    </div>
+  );
+};
 
 export default App;
