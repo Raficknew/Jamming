@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { NavBar } from "./components/navBar/navBar";
 import { SearchBar } from "./components/searchBar/searchBar";
-import { TrackList } from "./components/trackList/trackList";
+import { PlayList } from "./components/PlayList/PlayList";
 import type { Track } from "./types/types";
+import { ResultsList } from "./components/resultsList/ResultsList";
 
 const fakeEndpoint = async (title: string, playList: Track[]) => {
   if (!title || playList.length === 0) {
@@ -98,13 +99,10 @@ function App() {
         onChange={(e) => setSearchQuery(e.target.value)}
       />
       <div className="flex flex-row gap-4 h-full">
-        <TrackList tracks={filteredTracks} onClick={addToPlaylist}>
-          <p className="text-2xl">Results</p>
-        </TrackList>
-        <TrackList
+        <ResultsList tracks={filteredTracks} onClick={addToPlaylist} />
+        <PlayList
           tracks={playlistTracks || []}
           onClick={removeFromPlaylist}
-          onPlayList
           sendPlaylist={async () => {
             setIsLoading(true);
             setPlayListName("");
@@ -112,17 +110,9 @@ function App() {
             alert(await fakeEndpoint(playListName, playlistTracks));
             setIsLoading(false);
           }}
-          playListName={playListName}
-        >
-          <input
-            type="text"
-            className="text-white outline-none text-2xl"
-            placeholder="Enter playlist Name..."
-            value={playListName}
-            onChange={(e) => setPlayListName(e.target.value)}
-            required
-          />
-        </TrackList>
+          inputValue={playListName}
+          onInputChange={(e) => setPlayListName(e.target.value)}
+        />
       </div>
     </div>
   );
